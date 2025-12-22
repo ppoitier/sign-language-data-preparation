@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ['sldp']
+
+[project]
+name = "sldp"
+version = "0.0.1"
+authors = [
+    { name="Pierre Poitier", email="pierre.poitier@unamur.be" },
+]
+description = "Sign Language Data Preparation toolbox"
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+]

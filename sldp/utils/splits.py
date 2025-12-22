@@ -1,3 +1,6 @@
+from typing import Optional
+
+import orjson
 from sklearn.model_selection import StratifiedGroupKFold
 
 
@@ -6,6 +9,7 @@ def create_folds(
         label_ids: list[str],
         signer_ids: list[str],
         n_folds: int,
+        dest_dir: Optional[str] = None,
 ) -> list[list[str]]:
     """
     Creates k-folds with different signers for cross-validation while preserving the label distribution.
@@ -24,6 +28,14 @@ def create_folds(
     # before splitting, which helps create more balanced folds.
     sgkf = StratifiedGroupKFold(n_splits=n_folds, shuffle=True, random_state=42)
     all_splits = []
-    for _, selected_indices in sgkf.split(X=sample_ids, y=label_ids, groups=signer_ids):
-        all_splits.append([sample_ids[idx] for idx in selected_indices])
+    for index, (_, selected_indices) in enumerate(sgkf.split(X=sample_ids, y=label_ids, groups=signer_ids)):
+        fold_ids = [sample_ids[idx] for idx in selected_indices]
+        all_splits.append(fold_ids)
+        if dest_dir is not None:
+            with open(f"{dest_dir}/fold_{index:06d}.json", "wb") as f:
+                f.write(orjson.dumps(fold_ids, option=orjson.OPT_INDENT_2))
     return all_splits
+
+
+
+

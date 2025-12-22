@@ -8,6 +8,19 @@ from datetime import datetime
 import numpy as np
 
 
+def create_inmemory_tar(mode='w') -> tuple[tarfile.TarFile, io.BytesIO]:
+    tar_buffer = io.BytesIO()
+    tar = tarfile.open(fileobj=tar_buffer, mode=mode)
+    return tar, tar_buffer
+
+
+def save_inmemory_tar(dest_filepath: str, tar: tarfile.TarFile, tar_buffer: io.BytesIO):
+    with open(dest_filepath, "wb") as file:
+        file.write(tar_buffer.getvalue())
+    tar_buffer.seek(0)
+    tar.close()
+
+
 def add_file_to_tar(
         name: str,
         tar_file: tarfile.TarFile,
@@ -84,6 +97,33 @@ def iter_tar_members(tar: tarfile.TarFile | str, recursive: bool = False):
                     yield member_copy
         else:
             yield member
+
+
+def get_tar_index(tar_path: str) -> dict[str, tuple[int, int]]:
+    """
+    Scans a TAR file and creates a JSON index mapping filenames to
+    their byte offset and size.
+
+    Args:
+        tar_path: Path to the large TAR file (e.g., "videos.tar").
+
+    Returns:
+        index: Dictionary mapping member names to their byte offset and size.
+    """
+    print(f"Creating index for {tar_path}...")
+    member_index = {}
+    with tarfile.open(tar_path, "r") as tar:
+        for member in tar.getmembers():
+            if member.isfile():
+                member_index[member.name] = (member.offset_data, member.size)
+    return member_index
+
+
+def load_bytes_from_tar(tar_path: str, offset: int, size: int) -> bytes:
+    with open(tar_path, "rb") as f:
+        f.seek(offset)
+        data = f.read(size)
+    return data
 
 
 if __name__ == "__main__":
