@@ -95,13 +95,14 @@ def extract_all_poses(
 
 if __name__ == "__main__":
     extract_all_poses(
-        # video_dir="E:/datasets/sign-language/lsfb-cont/videos",
-        video_dir="E:/datasets/sign-language/tmp/videos",
-        dest_dir="E:/datasets/sign-language/tmp/poses",
+        video_dir="/run/media/sign-language/T9/datasets/sign-language/lsfb-cont/videos",
+        dest_dir="/home/sign-language/datasets/lsfb-cont/poses",
         landmarker_paths={
-            "hand": "C:/mediapipe/models/hand_landmarker.task",
-            "pose": "C:/mediapipe/models/pose_landmarker_full.task",
-            "face": "C:/mediapipe/models/face_landmarker.task",
+            "hand": "/home/sign-language/weights/mediapipe/hand_landmarker.task",
+            "pose": "/home/sign-language/weights/mediapipe/pose_landmarker_full.task",
+            "face": "/home/sign-language/weights/mediapipe/face_landmarker.task",
         },
+        max_poses_per_tar=100,
+        n_workers=23,
         verbose=True,
     )

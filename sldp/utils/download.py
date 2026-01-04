@@ -72,7 +72,7 @@ async def download_files(
     """
     if verbose:
         print(
-            f"Starting download for {len(files_to_download)} files. "
+            f"Starting download for {len(files_to_download)} files."
             f"Config: {max_concurrent} concurrent, {max_rps} RPS, {max_retries} retries."
         )
     semaphore = asyncio.Semaphore(max_concurrent)
