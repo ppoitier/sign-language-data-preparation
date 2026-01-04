@@ -2,3 +2,4 @@ aiofiles
 joblib
 httpx
 pandas
+pympi-ling
