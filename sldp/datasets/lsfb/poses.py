@@ -62,13 +62,15 @@ def extract_all_poses(
     n_workers: int = 4,
     max_poses_per_tar: int = 500,
     accepted_extensions: tuple[str, ...] = ("mp4", "avi", "webm"),
+    skip_existing: bool = False,
     show_progress: bool = False,
     verbose: bool = False,
 ):
+    videos_to_skip = set()
     video_paths = [
         entry.path
         for entry in os.scandir(video_dir)
-        if entry.is_file() and entry.name.split(".")[-1] in accepted_extensions
+        if entry.is_file() and (entry.name.split(".")[-1] in accepted_extensions) and (Path(entry.name).stem not in videos_to_skip)
     ]
     video_path_batches = list(batched(video_paths, n=min(len(video_paths) // n_workers, max_poses_per_tar)))
     job_kwargs = [
