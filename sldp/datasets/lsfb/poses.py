@@ -84,30 +84,30 @@ def extract_all_poses(
     if verbose:
         print(f"Skipped {n_skipped_videos} samples.")
         print(
-            f"Prepare to extract poses from {len(video_path_batches)} batches containing {len(video_paths)} videos in total."
+            f"Prepare to extract poses from {len(video_paths)} videos using {len(video_path_batches)} batches."
         )
-    # job_kwargs = [
-    #     dict(
-    #         video_filepaths=batch_video_paths,
-    #         sample_ids=[Path(v).stem for v in batch_video_paths],
-    #         dest_tar_path=dest_dir + "/" + tar_name.format(i + index_offset),
-    #         landmarker_paths=landmarker_paths,
-    #         show_progress=show_progress,
-    #         verbose=verbose,
-    #     )
-    #     for i, batch_video_paths in enumerate(video_path_batches)
-    # ]
-    # extraction_statuses = run_parallel(
-    #     _poses_extraction_job, kwargs_list=job_kwargs, n_jobs=n_workers
-    # )
-    # extraction_statuses = dict(ChainMap(*extraction_statuses))
-    # df = pd.DataFrame(
-    #     [
-    #         {"id": sample_id, "status": status, "error_msg": msg}
-    #         for sample_id, (status, msg) in extraction_statuses.items()
-    #     ]
-    # )
-    # return df
+    job_kwargs = [
+        dict(
+            video_filepaths=batch_video_paths,
+            sample_ids=[Path(v).stem for v in batch_video_paths],
+            dest_tar_path=dest_dir + "/" + tar_name.format(i + index_offset),
+            landmarker_paths=landmarker_paths,
+            show_progress=show_progress,
+            verbose=verbose,
+        )
+        for i, batch_video_paths in enumerate(video_path_batches)
+    ]
+    extraction_statuses = run_parallel(
+        _poses_extraction_job, kwargs_list=job_kwargs, n_jobs=n_workers
+    )
+    extraction_statuses = dict(ChainMap(*extraction_statuses))
+    df = pd.DataFrame(
+        [
+            {"id": sample_id, "status": status, "error_msg": msg}
+            for sample_id, (status, msg) in extraction_statuses.items()
+        ]
+    )
+    return df
 
 
 if __name__ == "__main__":
@@ -115,7 +115,7 @@ if __name__ == "__main__":
         "/home/sign-language/datasets/lsfb-cont/poses_raw/poses_{000000..000038}.tar"
     )
     pose_ids = load_poses_ids_from_tars(tars_url)
-    extract_all_poses(
+    statuses = extract_all_poses(
         video_dir="/run/media/sign-language/T9/datasets/sign-language/lsfb-cont/videos",
         dest_dir="/home/sign-language/datasets/lsfb-cont/poses_raw",
         landmarker_paths={
@@ -123,11 +123,11 @@ if __name__ == "__main__":
             "pose": "/home/sign-language/weights/mediapipe/pose_landmarker_full.task",
             "face": "/home/sign-language/weights/mediapipe/face_landmarker.task",
         },
-        max_poses_per_tar=100,
+        max_poses_per_tar=4,
         n_workers=23,
         verbose=True,
         samples_to_skip=pose_ids,
     )
-    # statuses.to_csv(
-    #     "/home/sign-language/datasets/lsfb-cont/poses_raw/statuses.csv", index=False
-    # )
+    statuses.to_csv(
+        "/home/sign-language/datasets/lsfb-cont/poses_raw/statuses.csv", index=False
+    )
