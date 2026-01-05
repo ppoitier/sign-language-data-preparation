@@ -1,6 +1,19 @@
 import webdataset as wds
 
 
+def load_poses_ids_from_tars(tars_url: str):
+    samples = list(
+        wds.DataPipeline(
+            wds.SimpleShardList(tars_url),
+            wds.tarfile_to_samples(),
+        )
+    )
+    return set([
+        sample['__key__']
+        for sample in samples
+    ])
+
+
 def load_poses_from_tars(tars_url: str):
     samples = list(wds.DataPipeline(
         wds.SimpleShardList(tars_url),

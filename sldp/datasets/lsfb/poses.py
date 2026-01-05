@@ -9,6 +9,7 @@ import pandas as pd
 from sldp.utils.parallel import run_parallel
 from sldp.utils.tar import create_inmemory_tar, save_inmemory_tar, add_file_to_tar
 from sldp.poses.mediapipe.extraction import load_landmarkers, extract_poses
+from sldp.poses.loading import load_poses_ids_from_tars
 
 
 def _poses_extraction_job(
@@ -30,7 +31,7 @@ def _poses_extraction_job(
                 landmarkers = load_landmarkers(landmarker_paths)
                 # Register models so they close when the block exits
                 for model in landmarkers.values():
-                    if hasattr(model, "__enter__"): # Safety check
+                    if hasattr(model, "__enter__"):  # Safety check
                         stack.enter_context(model)
                 poses = extract_poses(
                     filepath,
@@ -62,43 +63,59 @@ def extract_all_poses(
     n_workers: int = 4,
     max_poses_per_tar: int = 500,
     accepted_extensions: tuple[str, ...] = ("mp4", "avi", "webm"),
-    skip_existing: bool = False,
+    index_offset=0,
     show_progress: bool = False,
     verbose: bool = False,
+    samples_to_skip: Optional[set[str]] = None,
 ):
-    videos_to_skip = set()
     video_paths = [
         entry.path
         for entry in os.scandir(video_dir)
-        if entry.is_file() and (entry.name.split(".")[-1] in accepted_extensions) and (Path(entry.name).stem not in videos_to_skip)
+        if entry.is_file() and (entry.name.split(".")[-1] in accepted_extensions)
     ]
-    video_path_batches = list(batched(video_paths, n=min(len(video_paths) // n_workers, max_poses_per_tar)))
-    job_kwargs = [
-        dict(
-            video_filepaths=batch_video_paths,
-            sample_ids=[Path(v).stem for v in batch_video_paths],
-            dest_tar_path=dest_dir + "/" + tar_name.format(i),
-            landmarker_paths=landmarker_paths,
-            show_progress=show_progress,
-            verbose=verbose,
-        )
-        for i, batch_video_paths in enumerate(video_path_batches)
-    ]
-    extraction_statuses = run_parallel(
-        _poses_extraction_job, kwargs_list=job_kwargs, n_jobs=n_workers
+    n_total_videos = len(video_paths)
+    video_paths = [p for p in video_paths if Path(p).stem not in samples_to_skip]
+    n_skipped_videos = n_total_videos - len(video_paths)
+    video_path_batches = list(
+        batched(video_paths, n=min(len(video_paths) // n_workers, max_poses_per_tar))
     )
-    extraction_statuses = dict(ChainMap(*extraction_statuses))
-    df = pd.DataFrame([
-        {"id": sample_id, "status": status, "error_msg": msg}
-        for sample_id, (status, msg) in extraction_statuses.items()
-    ])
-    return df
+    if verbose:
+        print(f"Skipped {n_skipped_videos} samples.")
+        print(
+            f"Prepare to extract poses from {len(video_path_batches)} batches containing {len(video_paths)} videos in total."
+        )
+    # job_kwargs = [
+    #     dict(
+    #         video_filepaths=batch_video_paths,
+    #         sample_ids=[Path(v).stem for v in batch_video_paths],
+    #         dest_tar_path=dest_dir + "/" + tar_name.format(i + index_offset),
+    #         landmarker_paths=landmarker_paths,
+    #         show_progress=show_progress,
+    #         verbose=verbose,
+    #     )
+    #     for i, batch_video_paths in enumerate(video_path_batches)
+    # ]
+    # extraction_statuses = run_parallel(
+    #     _poses_extraction_job, kwargs_list=job_kwargs, n_jobs=n_workers
+    # )
+    # extraction_statuses = dict(ChainMap(*extraction_statuses))
+    # df = pd.DataFrame(
+    #     [
+    #         {"id": sample_id, "status": status, "error_msg": msg}
+    #         for sample_id, (status, msg) in extraction_statuses.items()
+    #     ]
+    # )
+    # return df
 
 
 if __name__ == "__main__":
+    tars_url = (
+        "/home/sign-language/datasets/lsfb-cont/poses_raw/poses_{000000..000038}.tar"
+    )
+    pose_ids = load_poses_ids_from_tars(tars_url)
     extract_all_poses(
         video_dir="/run/media/sign-language/T9/datasets/sign-language/lsfb-cont/videos",
-        dest_dir="/home/sign-language/datasets/lsfb-cont/poses",
+        dest_dir="/home/sign-language/datasets/lsfb-cont/poses_raw",
         landmarker_paths={
             "hand": "/home/sign-language/weights/mediapipe/hand_landmarker.task",
             "pose": "/home/sign-language/weights/mediapipe/pose_landmarker_full.task",
@@ -108,3 +125,6 @@ if __name__ == "__main__":
         n_workers=23,
         verbose=True,
     )
+    # statuses.to_csv(
+    #     "/home/sign-language/datasets/lsfb-cont/poses_raw/statuses.csv", index=False
+    # )
