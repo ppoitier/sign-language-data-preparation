@@ -74,8 +74,10 @@ def extract_all_poses(
         if entry.is_file() and (entry.name.split(".")[-1] in accepted_extensions)
     ]
     n_total_videos = len(video_paths)
-    video_paths = [p for p in video_paths if Path(p).stem not in samples_to_skip]
-    n_skipped_videos = n_total_videos - len(video_paths)
+    n_skipped_videos = 0
+    if samples_to_skip is not None:
+        video_paths = [p for p in video_paths if Path(p).stem not in samples_to_skip]
+        n_skipped_videos = n_total_videos - len(video_paths)
     video_path_batches = list(
         batched(video_paths, n=min(len(video_paths) // n_workers, max_poses_per_tar))
     )
@@ -124,6 +126,7 @@ if __name__ == "__main__":
         max_poses_per_tar=100,
         n_workers=23,
         verbose=True,
+        samples_to_skip=pose_ids,
     )
     # statuses.to_csv(
     #     "/home/sign-language/datasets/lsfb-cont/poses_raw/statuses.csv", index=False
