@@ -1,133 +1,30 @@
-import os
-from itertools import batched
-from typing import Optional
-from collections import ChainMap
-from pathlib import Path
-from contextlib import ExitStack
-import pandas as pd
-
-from sldp.utils.parallel import run_parallel
-from sldp.utils.tar import create_inmemory_tar, save_inmemory_tar, add_file_to_tar
-from sldp.poses.mediapipe.extraction import load_landmarkers, extract_poses
-from sldp.poses.loading import load_poses_ids_from_tars
-
-
-def _poses_extraction_job(
-    video_filepaths: list[str],
-    sample_ids: list[str],
-    dest_tar_path: str,
-    landmarker_paths: dict[str, str],
-    show_progress: bool = False,
-    verbose: bool = False,
-) -> dict[str, tuple[str, Optional[str]]]:
-    assert ("pose" in landmarker_paths) and (
-        "hand" in landmarker_paths
-    ), "Pose and hand landmarkers are mandatory."
-    dest_tar, dest_tar_buffer = create_inmemory_tar()
-    extraction_statuses: dict[str, tuple[str, Optional[str]]] = dict()
-    for filepath, sample_id in zip(video_filepaths, sample_ids):
-        try:
-            with ExitStack() as stack:
-                landmarkers = load_landmarkers(landmarker_paths)
-                # Register models so they close when the block exits
-                for model in landmarkers.values():
-                    if hasattr(model, "__enter__"):  # Safety check
-                        stack.enter_context(model)
-                poses = extract_poses(
-                    filepath,
-                    landmarkers["pose"],
-                    landmarkers["hand"],
-                    landmarkers.get("face"),
-                    show_progress=show_progress,
-                )
-                for body_part, poses_array in poses.items():
-                    add_file_to_tar(
-                        f"{sample_id}.poses.{body_part}.npy", dest_tar, poses_array
-                    )
-                extraction_statuses[sample_id] = "ok", None
-                if verbose:
-                    print(f"[{os.getpid()}] Success: {sample_id}")
-        except Exception as e:
-            extraction_statuses[sample_id] = "error", str(e)
-            if verbose:
-                print(f"[{os.getpid()}] FAILED: {sample_id} | Error: {e}")
-    save_inmemory_tar(dest_tar_path, dest_tar, dest_tar_buffer)
-    return extraction_statuses
-
-
-def extract_all_poses(
-    video_dir: str,
-    dest_dir: str,
-    landmarker_paths: dict[str, str],
-    tar_name="poses_{:0>6}.tar",
-    n_workers: int = 4,
-    max_poses_per_tar: int = 500,
-    accepted_extensions: tuple[str, ...] = ("mp4", "avi", "webm"),
-    index_offset=0,
-    show_progress: bool = False,
-    verbose: bool = False,
-    samples_to_skip: Optional[set[str]] = None,
-):
-    video_paths = [
-        entry.path
-        for entry in os.scandir(video_dir)
-        if entry.is_file() and (entry.name.split(".")[-1] in accepted_extensions)
-    ]
-    n_total_videos = len(video_paths)
-    n_skipped_videos = 0
-    if samples_to_skip is not None:
-        video_paths = [p for p in video_paths if Path(p).stem not in samples_to_skip]
-        n_skipped_videos = n_total_videos - len(video_paths)
-    video_path_batches = list(
-        batched(video_paths, n=min(len(video_paths) // n_workers, max_poses_per_tar))
-    )
-    if verbose:
-        print(f"Skipped {n_skipped_videos} samples.")
-        print(
-            f"Prepare to extract poses from {len(video_paths)} videos using {len(video_path_batches)} batches."
-        )
-    job_kwargs = [
-        dict(
-            video_filepaths=batch_video_paths,
-            sample_ids=[Path(v).stem for v in batch_video_paths],
-            dest_tar_path=dest_dir + "/" + tar_name.format(i + index_offset),
-            landmarker_paths=landmarker_paths,
-            show_progress=show_progress,
-            verbose=verbose,
-        )
-        for i, batch_video_paths in enumerate(video_path_batches)
-    ]
-    extraction_statuses = run_parallel(
-        _poses_extraction_job, kwargs_list=job_kwargs, n_jobs=n_workers
-    )
-    extraction_statuses = dict(ChainMap(*extraction_statuses))
-    df = pd.DataFrame(
-        [
-            {"id": sample_id, "status": status, "error_msg": msg}
-            for sample_id, (status, msg) in extraction_statuses.items()
-        ]
-    )
-    return df
+from sldp.poses.io import load_poses_ids_from_tars
+from sldp.poses.extract_poses import batch_extract_all_poses_from_video_dir
+from sldp.poses.clean_poses import clean_all_poses_from_tars
 
 
 if __name__ == "__main__":
-    tars_url = (
-        "/home/sign-language/datasets/lsfb-cont/poses_raw/poses_{000000..000038}.tar"
-    )
+    tars_url = "file:E:/datasets/sign-language/lsfb-cont/poses_raw/mediapipe_old/poses_{000000..000291}.tar"
     pose_ids = load_poses_ids_from_tars(tars_url)
-    statuses = extract_all_poses(
-        video_dir="/run/media/sign-language/T9/datasets/sign-language/lsfb-cont/videos",
-        dest_dir="/home/sign-language/datasets/lsfb-cont/poses_raw",
+    statuses = batch_extract_all_poses_from_video_dir(
+        video_dir="E:/datasets/sign-language/lsfb-cont/videos",
+        dest_poses_dir="E:/datasets/sign-language/lsfb-cont/poses_raw/mediapipe_old",
         landmarker_paths={
             "hand": "/home/sign-language/weights/mediapipe/hand_landmarker.task",
             "pose": "/home/sign-language/weights/mediapipe/pose_landmarker_full.task",
             "face": "/home/sign-language/weights/mediapipe/face_landmarker.task",
         },
         max_poses_per_tar=4,
-        n_workers=23,
+        n_workers=7,
         verbose=True,
         samples_to_skip=pose_ids,
+        index_offset=292,
     )
-    statuses.to_csv(
-        "/home/sign-language/datasets/lsfb-cont/poses_raw/statuses.csv", index=False
-    )
+    # statuses.to_csv(
+    #     "/home/sign-language/datasets/lsfb-cont/poses_raw/statuses.csv", index=False
+    # )
+    # clean_all_poses_from_tars(
+    #     source_tar_urls="file:E:/datasets/sign-language/lsfb-cont/poses_raw/mediapipe_old/poses_000000.tar",
+    #     dest_tar_path="E:/datasets/sign-language/lsfb-cont/poses/mediapipe/cleaned_poses.tar",
+    #     show_progress=True,
+    # )

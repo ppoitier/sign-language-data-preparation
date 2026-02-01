@@ -17,7 +17,7 @@ def get_signer_id_from_video_name(video_name: str):
 
 def get_signer_task_from_tier(tier_id: str, tier_params: dict):
     tier_id = tier_id.replace(' ', '').upper()
-    signer_match = re.search(pattern=r'S?(\d){2,4}', string=tier_id)
+    signer_match = re.search(pattern=r'S?(\d){1,4}', string=tier_id)
     if signer_match is None:
         return None, None
     signer_id = int(signer_match.group().replace('S', ''))
@@ -27,7 +27,7 @@ def get_signer_task_from_tier(tier_id: str, tier_params: dict):
         task = 'left_hand'
     elif re.search(pattern="(MD)|(MAINDROITE)|(DROITE)", string=tier_id):
         task = 'right_hand'
-    elif re.search(pattern="(TRADUCTION)|(TRADCUTION)", string=tier_id):
+    elif re.search(pattern="(TRADUCTION)|(TRADCUTION)|(TRAD)", string=tier_id):
         task = 'traduction'
     return signer_id, task
 
