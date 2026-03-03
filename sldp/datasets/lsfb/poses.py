@@ -1,30 +1,13 @@
-from sldp.poses.io import load_poses_ids_from_tars
-from sldp.poses.extract_poses import batch_extract_all_poses_from_video_dir
+import re
+
 from sldp.poses.clean_poses import clean_all_poses_from_tars
 
 
 if __name__ == "__main__":
-    tars_url = "file:E:/datasets/sign-language/lsfb-cont/poses_raw/mediapipe_old/poses_{000000..000291}.tar"
-    pose_ids = load_poses_ids_from_tars(tars_url)
-    statuses = batch_extract_all_poses_from_video_dir(
-        video_dir="E:/datasets/sign-language/lsfb-cont/videos",
-        dest_poses_dir="E:/datasets/sign-language/lsfb-cont/poses_raw/mediapipe_old",
-        landmarker_paths={
-            "hand": "/home/sign-language/weights/mediapipe/hand_landmarker.task",
-            "pose": "/home/sign-language/weights/mediapipe/pose_landmarker_full.task",
-            "face": "/home/sign-language/weights/mediapipe/face_landmarker.task",
-        },
-        max_poses_per_tar=4,
-        n_workers=7,
-        verbose=True,
-        samples_to_skip=pose_ids,
-        index_offset=292,
+    id_pattern = r"CLSFBI(\d){4}(A|B)_S(\d){3}_(A|B)"
+    clean_all_poses_from_tars(
+        source_tar_urls="file:E:/datasets/sign-language/lsfb-cont/poses/mediapipe/raw/poses_{000000..000405}.tar",
+        dest_tar_path="E:/datasets/sign-language/lsfb-cont/poses/mediapipe/poses_linear_interpolation.tar",
+        show_progress=True,
+        filter_func=lambda sample_id, _: re.match(id_pattern, sample_id) is not None,
     )
-    # statuses.to_csv(
-    #     "/home/sign-language/datasets/lsfb-cont/poses_raw/statuses.csv", index=False
-    # )
-    # clean_all_poses_from_tars(
-    #     source_tar_urls="file:E:/datasets/sign-language/lsfb-cont/poses_raw/mediapipe_old/poses_000000.tar",
-    #     dest_tar_path="E:/datasets/sign-language/lsfb-cont/poses/mediapipe/cleaned_poses.tar",
-    #     show_progress=True,
-    # )

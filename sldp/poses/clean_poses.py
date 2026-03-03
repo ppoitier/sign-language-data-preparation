@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Callable
 import numpy as np
 import tarfile
 from tqdm import tqdm
@@ -20,8 +20,8 @@ from sldp.poses.io import iter_poses_from_tars, add_poses_to_tar
 
 
 def only_keep_relevant_body_parts(
-        pose_sequences: dict[str, np.ndarray],
-        body_parts: Optional[set[str]] = None,
+    pose_sequences: dict[str, np.ndarray],
+    body_parts: Optional[set[str]] = None,
 ) -> dict[str, np.ndarray]:
     """
     Filters MediaPipe landmarks to retain only specified body parts.
@@ -54,16 +54,16 @@ def only_keep_relevant_body_parts(
         (10, 40, 3)
     """
     definition_map = {
-        'left_hand':      ('left_hand',  slice(None)), # Keep all
-        'right_hand':     ('right_hand', slice(None)), # Keep all
-        'upper_pose':     ('pose',       slice(0, 23)),
-        'lips':           ('face',       LIPS_VERTICES),
-        'left_eye':       ('face',       LEFT_EYE_VERTICES),
-        'right_eye':      ('face',       RIGHT_EYE_VERTICES),
-        'left_iris':      ('face',       LEFT_IRIS_VERTICES),
-        'right_iris':     ('face',       RIGHT_IRIS_VERTICES),
-        'left_eyebrow':   ('face',       LEFT_EYEBROW_VERTICES),
-        'right_eyebrow':  ('face',       RIGHT_EYEBROW_VERTICES),
+        "left_hand": ("left_hand", slice(None)),  # Keep all
+        "right_hand": ("right_hand", slice(None)),  # Keep all
+        "upper_pose": ("pose", slice(0, 23)),
+        "lips": ("face", LIPS_VERTICES),
+        "left_eye": ("face", LEFT_EYE_VERTICES),
+        "right_eye": ("face", RIGHT_EYE_VERTICES),
+        "left_iris": ("face", LEFT_IRIS_VERTICES),
+        "right_iris": ("face", RIGHT_IRIS_VERTICES),
+        "left_eyebrow": ("face", LEFT_EYEBROW_VERTICES),
+        "right_eyebrow": ("face", RIGHT_EYEBROW_VERTICES),
     }
     if body_parts is None:
         body_parts = set(definition_map.keys())
@@ -80,22 +80,33 @@ def only_keep_relevant_body_parts(
     return new_pose_sequence
 
 
-def fill_missing_landmarks(pose_sequences: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
+def fill_missing_landmarks(
+    pose_sequences: dict[str, np.ndarray],
+) -> dict[str, np.ndarray]:
     transform = Compose(
         [
             InterpolateMissing(method="linear"),
             ReplaceNaN(fill_value=0.0),
         ]
     )
-    return {k: transform(v).astype('float16') for k, v in pose_sequences.items()}
+    return {k: transform(v).astype("float16") for k, v in pose_sequences.items()}
 
 
 def clean_poses(pose_sequences: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
     return fill_missing_landmarks(only_keep_relevant_body_parts(pose_sequences))
 
 
-def clean_all_poses_from_tars(source_tar_urls: str, dest_tar_path: str, show_progress=False):
-    tar = tarfile.open(dest_tar_path, mode='w|')
-    for sample_id, poses in tqdm(iter_poses_from_tars(source_tar_urls), disable=not show_progress):
+def clean_all_poses_from_tars(
+    source_tar_urls: str,
+    dest_tar_path: str,
+    filter_func: Optional[Callable] = None,
+    show_progress=False,
+):
+    tar = tarfile.open(dest_tar_path, mode="w|")
+    for sample_id, poses in tqdm(
+        iter_poses_from_tars(source_tar_urls), disable=not show_progress
+    ):
+        if filter_func is not None and not filter_func(sample_id, poses):
+            continue
         add_poses_to_tar(sample_id, clean_poses(poses), tar)
     tar.close()

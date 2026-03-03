@@ -2,10 +2,12 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class SignLanguageSample(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     id: str
     signer_id: str
     sign_language: str

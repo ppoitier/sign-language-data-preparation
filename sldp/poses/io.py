@@ -1,5 +1,8 @@
+from typing import Optional, Collection
+
 import webdataset as wds
 import numpy as np
+from tqdm import tqdm
 
 from sldp.utils.tar import add_file_to_tar
 
@@ -15,7 +18,8 @@ def load_poses_ids_from_tars(tars_url: str):
 
 
 def iter_poses_from_tars(
-    tars_url: str, body_parts: tuple[str, ...] = ("pose", "left_hand", "right_hand", "face")
+    tars_url: str,
+    body_parts: tuple[str, ...] = ("pose", "left_hand", "right_hand", "face"),
 ):
     iterator = wds.DataPipeline(
         wds.SimpleShardList(tars_url),
@@ -29,14 +33,17 @@ def iter_poses_from_tars(
         yield sample_id, poses
 
 
-def load_poses_from_tars(tars_url: str):
-    samples = list(
-        wds.DataPipeline(
-            wds.SimpleShardList(tars_url),
-            wds.tarfile_to_samples(),
-            wds.decode(),
-        )
-    )
+def load_poses_from_tars(tars_url: str, sample_ids: Optional[Collection[str]] = None):
+    pipeline_steps = [
+        wds.SimpleShardList(tars_url),
+        wds.tarfile_to_samples(),
+    ]
+    if sample_ids is not None:
+        sample_ids = set(sample_ids)
+        pipeline_steps.append(wds.select(lambda s: s["__key__"] in sample_ids))
+    pipeline_steps.append(wds.decode())
+
+    samples = tqdm(wds.DataPipeline(*pipeline_steps), unit='samples')
     sample_to_poses = lambda s: {
         k.split(".")[1]: array for k, array in s.items() if k.startswith("poses.")
     }

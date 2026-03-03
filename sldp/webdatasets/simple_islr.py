@@ -1,7 +1,13 @@
 import io
 import tarfile
 
+from pydantic import BaseModel
 from sldp.utils.tar import add_file_to_tar
+
+
+class Sample(BaseModel):
+    id: str
+    label: str
 
 
 def build_simple_islr_webdataset(samples: list[dict], dest_filepath: str):

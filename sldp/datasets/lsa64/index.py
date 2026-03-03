@@ -21,15 +21,15 @@ def create_sample_index(video_dir: str, dest_index_filepath: str):
     df.to_csv(dest_index_filepath, index=False)
 
 
-def create_splits(index_path: str):
-    index = pd.read_csv(index_path, dtype=str)
+def create_splits(root: str):
+    index = pd.read_csv(f"{root}/index.csv", dtype=str)
     sample_ids = index['id'].to_list()
     label_ids = index['class'].to_list()
     signer_ids = index['signer_id'].to_list()
-    folds = create_folds(sample_ids, label_ids, signer_ids, n_folds=3)
+    create_folds(sample_ids, label_ids, signer_ids, n_folds=4, dest_dir=f"{root}/metadata/folds")
 
 
 
 if __name__ == '__main__':
-    # create_sample_index("Z:/data/lsa64/videos", "Z:/data/lsa64/index.csv")
-    create_splits("Z:/data/lsa64/index.csv")
+    # create_sample_index("E:/datasets/sign-language/lsa64/videos", "E:/datasets/sign-language/lsa64/index.csv")
+    create_splits("E:/datasets/sign-language/lsa64")

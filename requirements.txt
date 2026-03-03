@@ -3,3 +3,5 @@ joblib
 httpx
 pandas
 pympi-ling
+pydantic
+pydantic-numpy
