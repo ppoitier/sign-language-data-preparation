@@ -31,7 +31,7 @@ def add_file_to_tar(
     Supported data types:
     - strings
     - bytes
-    - dict | list (stored as json)
+    - dict | list (stored as .json)
     - numpy array (stored as .npy)
 
     Args:
@@ -55,7 +55,7 @@ def add_file_to_tar(
         file_data.seek(0)
         file_size = file_data.getbuffer().nbytes
     else:
-        raise ValueError("Data must be a file path, bytes, or numpy array.")
+        raise ValueError(f"Data [{type(data)}] must be a file path, bytes, or numpy array.")
 
     file_info = tarfile.TarInfo(name=name)
     file_info.size = file_size

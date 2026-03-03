@@ -19,10 +19,12 @@ def get_linked_videos(eaf: Eaf):
     return videos
 
 
-def _annotations_to_dataframe(annotations: list[tuple[int, int, str, ...]]) -> pd.DataFrame:
+def _annotations_to_dataframe(annotations: list[tuple[int, int, str, ...]], lower_case=True) -> pd.DataFrame:
     annots = pd.DataFrame([a[:3] for a in annotations], columns=["start_ms", "end_ms", "label"])
     annots = annots.sort_values("start_ms", ignore_index=True)
-    annots['label'] = annots['label'].str.lower().str.strip()
+    annots['label'] = annots['label'].str.strip()
+    if lower_case:
+        annots['label'] = annots['label'].str.lower()
     return annots
 
 
@@ -68,9 +70,11 @@ def get_annotations_per_signer_and_task(
             if verbose:
                 print(f"Ignore tier [{tier_id}]")
             continue
-        print(f"Found tier [{tier_id}]:")
+        if verbose:
+            print(f"Found tier [{tier_id}]:")
         signer_annots = _annotations_to_dataframe(
-            eaf.get_annotation_data_for_tier(tier_id)
+            eaf.get_annotation_data_for_tier(tier_id),
+            lower_case=task_id != 'translation',
         )
         if verbose:
             print(f"---- signer [{signer_id}]")

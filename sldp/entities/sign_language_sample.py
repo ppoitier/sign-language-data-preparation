@@ -18,4 +18,4 @@ class SignLanguageSample(BaseModel):
     video: Optional[bytes] = None
     video_path: Optional[str] = None
 
-    annotations: Optional[pd.DataFrame] = None
+    annotations: Optional[dict[str, pd.DataFrame]] = None
