@@ -1,0 +1,1 @@
+ID_PATTERN = r"CLSFBI(\d){4}(A|B)_S(\d){3}_(A|B)"
