@@ -12,6 +12,6 @@ if __name__ == '__main__':
     #     verbose=True,
     # )
     clean_all_poses_from_tars(
-        "file:E:/datasets/sign-language/lsa64/poses_raw/mediapipe/poses_{000000..000007}.tar",
-        "E:/datasets/sign-language/lsa64/poses_raw/mediapipe_cleaned.tar"
+        "file:E:/datasets/sign-language/lsa64/poses/mediapipe/raw/poses_{000000..000007}.tar",
+        "E:/datasets/sign-language/lsa64/poses/mediapipe/poses_linear_interpolation.tar"
     )

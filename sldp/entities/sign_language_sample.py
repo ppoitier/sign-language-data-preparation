@@ -9,8 +9,8 @@ class SignLanguageSample(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     id: str
-    signer_id: str
     sign_language: str
+    signer_id: Optional[str] = None
     dataset: Optional[str] = None
 
     label: Optional[str] = None

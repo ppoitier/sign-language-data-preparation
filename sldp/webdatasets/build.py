@@ -1,6 +1,3 @@
-import math
-from itertools import batched
-
 import pandas as pd
 from tqdm import tqdm
 from sklearn.model_selection import GroupKFold
@@ -43,6 +40,13 @@ def add_sample_to_tar(sample: SignLanguageSample, tar):
 
 def group_samples_by_signers(samples: list[SignLanguageSample], n_groups: int) -> list[list[SignLanguageSample]]:
     """Splits samples into n_groups ensuring signers do not overlap between shards."""
+    missing = [sample.id for sample in samples if sample.signer_id is None]
+    if missing:
+        raise ValueError(
+            f"Cannot group by signer: {len(missing)} sample(s) have no signer_id "
+            f"(e.g. {missing[:5]}). Provide a signer_mapping when loading samples."
+        )
+
     groups = [sample.signer_id for sample in samples]
     n_unique_signers = len(set(groups))
 

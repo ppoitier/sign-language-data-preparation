@@ -5,6 +5,7 @@ import tarfile
 import posixpath
 from datetime import datetime
 
+from tqdm import tqdm
 import numpy as np
 
 
@@ -99,23 +100,35 @@ def iter_tar_members(tar: tarfile.TarFile | str, recursive: bool = False):
             yield member
 
 
-def get_tar_index(tar_path: str) -> dict[str, tuple[int, int]]:
+def get_tar_index(tar_path: str, progress: bool = False) -> dict[str, tuple[int, int]]:
     """
-    Scans a TAR file and creates a JSON index mapping filenames to
-    their byte offset and size.
+        Scans a TAR file and creates a JSON index mapping filenames to
+        their byte offset and size.
 
-    Args:
-        tar_path: Path to the large TAR file (e.g., "videos.tar").
+        Args:
+            tar_path: Path to the large TAR file (e.g., "videos.tar").
+            progress: If True, show the indexing progress bar.
 
-    Returns:
-        index: Dictionary mapping member names to their byte offset and size.
-    """
+        Returns:
+            index: Dictionary mapping member names to their byte offset and size.
+        """
     print(f"Creating index for {tar_path}...")
     member_index = {}
     with tarfile.open(tar_path, "r") as tar:
-        for member in tar.getmembers():
+        it = iter(lambda: tar.next(), None)
+        if progress:
+            it = tqdm(it, desc="Indexing", unit=" members")
+            pbar = it
+            it = iter(it)
+        while True:
+            try:
+                member = next(it)
+            except StopIteration:
+                break
             if member.isfile():
                 member_index[member.name] = (member.offset_data, member.size)
+            if progress:
+                pbar.set_postfix(indexed=len(member_index))
     return member_index
 
 
