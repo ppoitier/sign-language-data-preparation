@@ -20,15 +20,16 @@ def load_continuous_samples_from_annotations(root: str, sign_language: str) -> l
         if sample_id not in poses:
             print(f"Cannot find poses for sample {sample_id}.")
             continue
-        samples.append(
-            SignLanguageSample(
-                id=sample_id,
-                sign_language=sign_language,
-                signer_id=annots['signer'],
-                annotations={k: annots[k] for k in ('left_hand', 'right_hand', 'both_hands')},
-                poses=poses[sample_id],
-            )
+        sample = SignLanguageSample(
+            id=sample_id,
+            sign_language=sign_language,
+            signer_id=annots['signer'],
+            annotations={k: annots[k] for k in ('left_hand', 'right_hand', 'both_hands')},
+            poses=poses[sample_id],
         )
+        if 'translation' in annots:
+            sample.annotations['translation'] = annots['translation']
+        samples.append(sample)
     print("Samples loaded.")
     return samples
 

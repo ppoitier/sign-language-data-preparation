@@ -65,6 +65,31 @@ def add_frame_boundaries(
     return all_annotations
 
 
+def remove_unannotated_samples(all_annotations: dict[str, Annotations]) -> dict[str, Annotations]:
+    return {
+        sample_id: sample_all_annotations
+        for sample_id, sample_all_annotations in all_annotations.items()
+        if any(
+            not df.empty
+            for df in sample_all_annotations.values()
+            if isinstance(df, pd.DataFrame)
+        )
+    }
+
+
+def remove_empty_annotations(
+    all_annotations: dict[str, Annotations], annotation_ids: list[str]
+) -> dict[str, Annotations]:
+    return {
+        sample_id: {
+            annot_id: annot
+            for annot_id, annot in sample_all_annotations.items()
+            if annot_id not in annotation_ids
+            or (isinstance(annot, pd.DataFrame) and not annot.empty)
+        }
+        for sample_id, sample_all_annotations in all_annotations.items()
+    }
+
 if __name__ == "__main__":
     left_hand = pd.DataFrame(
         [

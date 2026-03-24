@@ -1,6 +1,7 @@
 import pandas as pd
 
 from sldp.utils.json import to_json, from_json, to_json_bytes
+from sldp.annotations.columns import DEFAULT_COLUMNS
 
 
 def annotations_to_json_bytes(annots: pd.DataFrame) -> bytes:
@@ -35,8 +36,12 @@ def read_annotations_from_json(
         annots[video_name] = {}
         for key, value in video_annots.items():
             if isinstance(value, list):
-                # pandas automatically infers columns and types from the list of dicts
                 annots[video_name][key] = pd.DataFrame(value)
+                if value:
+                    annots[video_name][key] = pd.DataFrame(value)
+                else:
+                    columns = DEFAULT_COLUMNS.get(key, [])
+                    annots[video_name][key] = pd.DataFrame(columns=columns)
             else:
                 annots[video_name][key] = value
 
