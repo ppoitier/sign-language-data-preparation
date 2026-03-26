@@ -2,21 +2,21 @@ import re
 
 
 def categorize_dgs_gloss(
-        gloss: str,
-        variation_pattern: str = r"^(.*?)((\d+[A-Za-z]*)?[\*\^]*)$",
-        pointing_pattern: str = r"^\$INDEX.*",
-        depictive_pattern: str = r"^\$PROD.*",
-        buoys_pattern: str = r"^\$LIST.*",
-        palm_up_pattern: str = r"^\$GEST-OFF.*",
-        gesture_pattern: str = r"^\$GEST.*",
-        fingerspelling_pattern: str = r"^\$ALPHA.*",
-        number_pattern: str = r"^\$NUM.*",
-        entity_pattern: str = r"^\$(?:NAME|ORG)(?:-(.+))?$",
-        morpheme_pattern: str = r"^\$MORPH-(.+)$",
-        foreign_pattern: str = r"^(.*)-(?:ASL|BSL|INTS|LIS|LSM|NZSL|PJM)$",
-        init_pattern: str = r"^\$INIT.*",
-        cued_speech_pattern: str = r"^\$CUED-SPEECH.*",
-        unclear_pattern: str = r"^(\$UNCLEAR|\$\$EXTRA-LING-ACT).*"
+    gloss: str,
+    variation_pattern: str = r"^(.*?)((\d+[a-z]*)?[\*\^]*)$",
+    pointing_pattern: str = r"^\$index.*",
+    depictive_pattern: str = r"^\$prod.*",
+    buoys_pattern: str = r"^\$list.*",
+    palm_up_pattern: str = r"^\$gest-off.*",
+    gesture_pattern: str = r"^\$gest.*",
+    fingerspelling_pattern: str = r"^\$alpha.*",
+    number_pattern: str = r"^\$num.*",
+    entity_pattern: str = r"^\$(?:name|org)(?:-(.+))?$",
+    morpheme_pattern: str = r"^\$morph-(.+)$",
+    foreign_pattern: str = r"^(.*)-(?:asl|bsl|ints|lis|lsm|nzsl|pjm)$",
+    init_pattern: str = r"^\$init.*",
+    cued_speech_pattern: str = r"^\$cued-speech.*",
+    unclear_pattern: str = r"^(\$unclear|\$\$extra-ling-act).*",
 ) -> tuple[str | None, str, str | None, str | None]:
     """
     Parses a DGS Corpus sign language gloss into its linguistic components.
@@ -80,10 +80,14 @@ def categorize_dgs_gloss(
     elif entity_pattern and (ent_match := re.fullmatch(entity_pattern, parsed_base)):
         sign_type = "entity"
         lemma = ent_match.group(1)  # Evaluates to None for anonymous $NAME / $ORG
-    elif morpheme_pattern and (morph_match := re.fullmatch(morpheme_pattern, parsed_base)):
+    elif morpheme_pattern and (
+        morph_match := re.fullmatch(morpheme_pattern, parsed_base)
+    ):
         sign_type = "morpheme"
         lemma = morph_match.group(1)
-    elif foreign_pattern and (foreign_match := re.fullmatch(foreign_pattern, parsed_base)):
+    elif foreign_pattern and (
+        foreign_match := re.fullmatch(foreign_pattern, parsed_base)
+    ):
         sign_type = "foreign"
         lemma = foreign_match.group(1)
 

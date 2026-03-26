@@ -4,6 +4,7 @@ import os
 import tarfile
 import posixpath
 from datetime import datetime
+from typing import Generator, IO
 
 from tqdm import tqdm
 import numpy as np
@@ -65,16 +66,40 @@ def add_file_to_tar(
     tar_file.addfile(file_info, file_data)
 
 
-def iter_tar_members(tar: tarfile.TarFile | str, recursive: bool = False):
+def iter_tar_members(
+    tar: tarfile.TarFile | str,
+    recursive: bool = False,
+) -> Generator[tuple[tarfile.TarInfo, IO[bytes]], None, None]:
     """
-    A helper generator that yields members from a tar archive,
+    A helper generator that yields (TarInfo, file_obj) tuples from a tar archive,
     handling nested tar files if specified.
 
-    Supported tar extensions are:
-      - tar
-      - tar.gz
-      - tgz
-      - tar.bz2
+    Uses streaming mode (r|*) for memory-efficient processing of large archives.
+    The file_obj is only valid during the current iteration step — it must be
+    read before advancing to the next member. Do not store handles for later use;
+    once the iterator advances, previous handles become invalid at any nesting level.
+
+    Args:
+        tar: A path to a tar archive or an already-opened TarFile object.
+        recursive: If True, descend into nested tar archives and yield their
+            members as well, with paths prefixed by the parent tar's name.
+
+    Yields:
+        A tuple of (TarInfo, file_obj) where file_obj is a readable file-like
+        object for the member's contents.
+
+    Supported tar extensions for recursive extraction:
+        .tar, .tar.gz, .tgz, .tar.bz2
+
+    Example:
+
+        # Correct — read immediately
+        for member, fobj in iter_tar_members("archive.tar.gz", recursive=True):
+            data = fobj.read()
+
+        # Wrong — handles will be stale
+        handles = [(m, f) for m, f in iter_tar_members("archive.tar.gz")]
+        handles[0][1].read() # will fail or return garbage
     """
     if not isinstance(tar, tarfile.TarFile):
         with tarfile.open(tar, mode="r|*") as tar_obj:
@@ -83,21 +108,24 @@ def iter_tar_members(tar: tarfile.TarFile | str, recursive: bool = False):
 
     tar_extensions = {".tar", ".tar.gz", ".tgz", ".tar.bz2"}
     for member in tar:
+        if not member.isfile():
+            continue
+
+        file_obj = tar.extractfile(member)
+        if not file_obj:
+            continue
+
         if (
-                recursive and
-                member.isfile() and
-                any(member.name.endswith(ext) for ext in tar_extensions)
+            recursive
+            and any(member.name.endswith(ext) for ext in tar_extensions)
         ):
-            sub_tar_stream = tar.extractfile(member)
-            if not sub_tar_stream:
-                continue
-            with tarfile.open(fileobj=sub_tar_stream, mode="r|*") as nested_tar:
-                for nested_member in iter_tar_members(nested_tar, recursive):
+            with tarfile.open(fileobj=file_obj, mode="r|*") as nested_tar:
+                for nested_member, nested_fobj in iter_tar_members(nested_tar, recursive):
                     member_copy = copy.copy(nested_member)
                     member_copy.name = posixpath.join(member.name, nested_member.name)
-                    yield member_copy
+                    yield member_copy, nested_fobj
         else:
-            yield member
+            yield member, file_obj
 
 
 def get_tar_index(tar_path: str, progress: bool = False) -> dict[str, tuple[int, int]]:

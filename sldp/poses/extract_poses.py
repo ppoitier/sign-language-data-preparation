@@ -11,8 +11,10 @@ import pandas as pd
 
 from sldp.utils.tar import create_inmemory_tar, add_file_to_tar, save_inmemory_tar
 from sldp.utils.parallel import run_parallel
+
 # from sldp.poses.mediapipe.extraction import load_landmarkers, extract_poses
-from sign_language_tools.pose.mediapipe.extraction import extract_poses_from_video
+# from sign_language_tools.pose.mediapipe.extraction import extract_poses_from_video
+
 
 class PoseExtractionCommand(BaseModel):
     sample_id: str
@@ -24,7 +26,7 @@ class BatchPoseExtractionCommand(BaseModel):
     sample_ids: Sequence[str]
     src_video_paths: Sequence[str]
     dest_tar_path: str
-    landmarker_paths: dict[Literal['pose', 'hand', 'face'], str]
+    landmarker_paths: dict[Literal["pose", "hand", "face"], str]
 
 
 # def build_poses_from_sample(
@@ -74,10 +76,10 @@ def process_batch_pose_extraction_command(
                 #     landmarkers.get("face"),
                 #     show_progress=show_progress,
                 # )
-                # TODO: replace this with new Holistic model when it's out
-                poses = extract_poses_from_video(filepath)
-                for body_part, poses_array in poses.items():
-                    add_file_to_tar(f"{sample_id}.poses.{body_part}.npy", dest_tar, poses_array)
+                # # TODO: replace this with new Holistic model when it's out
+                # poses = extract_poses_from_video(filepath)
+                # for body_part, poses_array in poses.items():
+                #     add_file_to_tar(f"{sample_id}.poses.{body_part}.npy", dest_tar, poses_array)
                 extraction_statuses[sample_id] = "ok", None
                 if verbose:
                     print(f"[{os.getpid()}] Success: {sample_id}")
@@ -92,7 +94,7 @@ def process_batch_pose_extraction_command(
 def batch_extract_all_poses_from_video_dir(
     video_dir: str,
     dest_poses_dir: str,
-    landmarker_paths: dict[Literal['pose', 'hand', 'face'], str],
+    landmarker_paths: dict[Literal["pose", "hand", "face"], str],
     tar_name="poses_{:0>6}.tar",
     n_workers: int = 4,
     max_poses_per_tar: int = 500,
@@ -133,7 +135,9 @@ def batch_extract_all_poses_from_video_dir(
         )
         for i, batch_video_paths in enumerate(video_path_batches)
     ]
-    extraction_statuses = run_parallel(process_batch_pose_extraction_command, kwargs_list=job_kwargs, n_jobs=n_workers)
+    extraction_statuses = run_parallel(
+        process_batch_pose_extraction_command, kwargs_list=job_kwargs, n_jobs=n_workers
+    )
     extraction_statuses = dict(ChainMap(*extraction_statuses))
     df = pd.DataFrame(
         [

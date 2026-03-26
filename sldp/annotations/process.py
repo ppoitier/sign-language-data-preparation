@@ -65,7 +65,9 @@ def add_frame_boundaries(
     return all_annotations
 
 
-def remove_unannotated_samples(all_annotations: dict[str, Annotations]) -> dict[str, Annotations]:
+def remove_unannotated_samples(
+    all_annotations: dict[str, Annotations],
+) -> dict[str, Annotations]:
     return {
         sample_id: sample_all_annotations
         for sample_id, sample_all_annotations in all_annotations.items()
@@ -89,6 +91,7 @@ def remove_empty_annotations(
         }
         for sample_id, sample_all_annotations in all_annotations.items()
     }
+
 
 if __name__ == "__main__":
     left_hand = pd.DataFrame(
