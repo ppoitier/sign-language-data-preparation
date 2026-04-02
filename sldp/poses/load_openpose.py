@@ -163,37 +163,3 @@ def read_open_pose_tar(
             poses=merged_poses,
             frame_statuses=merged_status,
         )
-
-
-if __name__ == "__main__":
-    from sign_language_tools.player.video_player import VideoPlayer
-    from sign_language_tools.pose.openpose.edges import POSE_EDGES, HAND_EDGES
-    import matplotlib.pyplot as plt
-    import numpy as np
-
-    for sample, _ in zip(
-        read_open_pose_tar(
-            r"E:\datasets\sign-language\bobsl\bobsl_v1_4_features_keypoints.tar",
-            show_progress=True,
-            sub_tar=True,
-            body_regions=("pose", "left_hand", "right_hand", "face"),
-        ),
-        range(3),
-    ):
-        pose = sample.poses["pose"]
-        left_hand = sample.poses["left_hand"]
-        right_hand = sample.poses["right_hand"]
-        face = sample.poses["face"]
-        print("pose:", pose.shape)
-        print("left_hand:", left_hand.shape)
-        print("right_hand:", right_hand.shape)
-        print("face:", face.shape)
-
-        # player = VideoPlayer()
-        # player.attach_empty(width=800, height=600, name="skeleton")
-        # player.attach_poses(pose, POSE_EDGES, vertex_x_lim=(0, 1), vertex_y_lim=(0, 1), parent_name='skeleton')
-        # player.attach_poses(left_hand, HAND_EDGES, vertex_x_lim=(0, 1), vertex_y_lim=(0, 1), parent_name='skeleton')
-        # player.attach_poses(right_hand, HAND_EDGES, vertex_x_lim=(0, 1), vertex_y_lim=(0, 1), parent_name='skeleton')
-        # player.play()
-
-        break

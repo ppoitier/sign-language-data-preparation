@@ -11,7 +11,6 @@ class SignLanguageSample(BaseModel):
     id: str
     sign_language: str
     signer_id: Optional[str] = None
-    dataset: Optional[str] = None
 
     label: Optional[str] = None
     label_id: Optional[int] = None
@@ -20,4 +19,18 @@ class SignLanguageSample(BaseModel):
     video: Optional[bytes] = None
     video_path: Optional[str] = None
 
+    # --- Continuous sample optional data ---
+
     annotations: Optional[dict[str, pd.DataFrame]] = None
+
+    # --- Isolate sample optional data ---
+
+    parent_sample_id: Optional[str] = None
+
+    start_ms: Optional[int] = None
+    end_ms: Optional[int] = None
+
+    start_frame: Optional[int] = None
+    end_frame: Optional[int] = None
+
+    linguistic_metadata: Optional[dict[str, str]] = None

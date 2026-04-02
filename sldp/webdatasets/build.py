@@ -1,8 +1,10 @@
+import json
+
 import pandas as pd
 from tqdm import tqdm
 from sklearn.model_selection import GroupKFold
 
-from sldp.entities.sign_language_sample import SignLanguageSample
+from sldp.samples.entity import SignLanguageSample
 from sldp.utils.tar import create_inmemory_tar, add_file_to_tar, save_inmemory_tar
 from sldp.annotations.io import annotations_to_json_bytes
 
@@ -25,7 +27,7 @@ def add_sample_to_tar(sample: SignLanguageSample, tar):
         add_file_to_tar(
             f"{sample.id}.label.txt", tar, str(sample.label).encode("utf-8")
         )
-    if sample.label_id:
+    if sample.label_id is not None:
         add_file_to_tar(
             f"{sample.id}.label.idx", tar, str(sample.label_id).encode("ascii")
         )
@@ -36,6 +38,36 @@ def add_sample_to_tar(sample: SignLanguageSample, tar):
     add_file_to_tar(
         f"{sample.id}.language.txt", tar, str(sample.sign_language).encode("utf-8")
     )
+
+    # Isolated sample boundary information
+    if sample.start_ms is not None and sample.end_ms is not None:
+        add_file_to_tar(
+            f"{sample.id}.boundaries.json",
+            tar,
+            json.dumps(
+                {
+                    "start_ms": sample.start_ms,
+                    "end_ms": sample.end_ms,
+                    "start_frame": sample.start_frame,
+                    "end_frame": sample.end_frame,
+                }
+            ).encode("utf-8"),
+        )
+
+    # Isolated linguistic information
+    if sample.linguistic_metadata:
+        add_file_to_tar(
+            f"{sample.id}.linguistic_metadata.json",
+            tar,
+            json.dumps(sample.linguistic_metadata).encode("utf-8"),
+        )
+
+    if sample.parent_sample_id is not None:
+        add_file_to_tar(
+            f"{sample.id}.parent.txt",
+            tar,
+            str(sample.parent_sample_id).encode("utf-8"),
+        )
 
 
 def group_samples_by_signers(samples: list[SignLanguageSample], n_groups: int) -> list[list[SignLanguageSample]]:
@@ -71,7 +103,7 @@ def build_sign_language_webdataset(
     if n_shards > 1:
         sample_groups = group_samples_by_signers(samples, n_shards)
         for i, sample_batch in tqdm(
-            zip(range(n_shards), sample_groups), total=n_shards, unit="shards"
+            zip(range(n_shards), sample_groups), total=n_shards, unit=" shards"
         ):
             build_sign_language_webdataset(
                 sample_batch, n_shards=1, dest_filepath=dest_filepath.format(i)

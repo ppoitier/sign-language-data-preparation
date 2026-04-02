@@ -1,6 +1,9 @@
 from typing import Callable, Optional
+import webdataset as wds
+import pandas as pd
 
-from sldp.entities.sign_language_sample import SignLanguageSample
+from sldp.samples.entity import SignLanguageSample
+from sldp.annotations.columns import DEFAULT_COLUMNS
 from sldp.annotations.io import read_annotations_from_json
 from sldp.poses.io import load_poses_from_tars
 
@@ -69,3 +72,70 @@ def load_unannotated_samples_from_poses(
         samples.append(sample)
     print(f"{len(samples)} samples loaded ({skipped} filtered out).")
     return samples
+
+
+def _get_webdataset_map_fn(body_parts: tuple[str], annotation_ids: tuple[str]):
+    def _map_fn(raw_sample: dict) -> SignLanguageSample:
+        sample = SignLanguageSample(
+            id=raw_sample["__key__"],
+            sign_language=raw_sample["language.txt"],
+            signer_id=raw_sample["signer.txt"],
+        )
+        annotations = {
+            annot_id: pd.DataFrame(
+                raw_sample[f"annotations.{annot_id}.json"],
+                columns=DEFAULT_COLUMNS[annot_id],
+            )
+            for annot_id in annotation_ids
+        }
+        if len(annotations) > 0:
+            sample.annotations = annotations
+        poses = {
+            body_part: raw_sample[f"pose.{body_part}.npy"] for body_part in body_parts
+        }
+        if len(poses) > 0:
+            sample.poses = poses
+        if "label.txt" in raw_sample:
+            sample.label = raw_sample["label.txt"]
+        if "label.id" in raw_sample:
+            sample.label_id = raw_sample["label.id"]
+        return sample
+
+    return _map_fn
+
+
+def iter_samples_from_webdataset(
+    tar_url: str,
+    annotation_ids: tuple[str] = (
+        "both_hands",
+        "left_hand",
+        "right_hand",
+    ),
+    body_parts: tuple[str] = (
+        "upper_pose",
+        "left_hand",
+        "right_hand",
+        "left_eye",
+        "right_eye",
+        "left_eyebrow",
+        "right_eyebrow",
+        "left_iris",
+        "right_iris",
+        "lips",
+    ),
+):
+    iterator = wds.DataPipeline(
+        wds.SimpleShardList(tar_url),
+        wds.tarfile_to_samples(),
+        wds.decode(),
+        wds.map(_get_webdataset_map_fn(body_parts, annotation_ids)),
+    )
+    for sample in iterator:
+        yield sample
+
+
+if __name__ == "__main__":
+    for sample in iter_samples_from_webdataset(
+        "file:E:/datasets/sign-language/lsfb-cont/shards/annotated/shard_000000.tar"
+    ):
+        print(sample.annotations["left_hand"].columns.to_list())

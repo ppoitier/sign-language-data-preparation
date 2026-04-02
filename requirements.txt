@@ -1,7 +1,10 @@
 aiofiles
 joblib
 httpx
+orjson
 pandas
 pympi-ling
 pydantic
 pydantic-numpy
+scikit-learn
+webdataset

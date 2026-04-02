@@ -1,1 +1,0 @@
-from sldp.entities.sign_language_sample import SignLanguageSample
