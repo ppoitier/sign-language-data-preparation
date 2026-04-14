@@ -1,3 +1,5 @@
+import re
+
 import pandas as pd
 import numpy as np
 
@@ -37,6 +39,20 @@ def merge_hand_annotations(
     merged_df: pd.DataFrame = pd.concat([left_kept, right_kept], ignore_index=True)
     merged_df = merged_df.sort_values(by="start_ms", ignore_index=True)
     return merged_df
+
+
+def replace_in_annotation_ids(
+    all_annotations: dict[str, Annotations],
+    replacements: list[tuple[str | re.Pattern, str]],
+) -> dict[str, Annotations]:
+    compiled = [(re.compile(pattern), repl) for pattern, repl in replacements]
+    result = {}
+    for key, value in all_annotations.items():
+        new_key = key
+        for pattern, repl in compiled:
+            new_key = pattern.sub(repl, new_key)
+        result[new_key] = value
+    return result
 
 
 def merge_all_hand_annotations(

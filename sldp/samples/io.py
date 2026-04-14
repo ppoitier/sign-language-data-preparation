@@ -20,6 +20,10 @@ def load_continuous_samples_from_annotations(
     poses = load_poses_from_tars(
         f"file:{root}/poses/mediapipe/poses_linear_interpolation.tar", sample_ids
     )
+    print("POSES")
+    print(poses.keys())
+    print("ANNOTATIONS")
+    print(annotations.keys())
     print("Preparing samples...")
     samples = []
     for sample_id, annots in annotations.items():

@@ -59,7 +59,7 @@ def parse_all_annotations_from_elan(
 
         filename = file.stem
         signer_id_to_sample_id = {
-            signer_id: f"{filename}_1{get_signer_letter_from_tier_ids(eaf, signer_id)}1"
+            signer_id: f"{filename}_{get_signer_letter_from_tier_ids(eaf, signer_id)}"
             for signer_id in annots.keys()
         }
         annots = {

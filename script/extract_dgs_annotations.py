@@ -5,11 +5,12 @@ from sldp.annotations.process import (
     remove_unannotated_samples,
     remove_empty_annotations,
     add_frame_boundaries,
+    replace_in_annotation_ids,
 )
 from sldp.annotations.glosses import categorize_glosses_in_all_annotations
 from sldp.annotations.translation import process_translations
 from sldp.annotations.io import save_annotations_to_json, read_annotations_from_json
-from sldp.annotations.vocabulary import extract_vocabulary_from_all_annotations
+from sldp.annotations.vocabulary import extract_vocabulary_from_annotations
 from sldp.utils.json import to_json
 
 if __name__ == "__main__":
@@ -23,6 +24,14 @@ if __name__ == "__main__":
     all_annotations, all_issues = parse_all_annotations_from_elan(eaf_root)
     print(f"Saving potential annotation issues to json [{issues_dest_filepath}]...")
     to_json(all_issues, issues_dest_filepath)
+    # print(f"Fix annotation ids...")
+    # all_annotations = replace_in_annotation_ids(
+    #     all_annotations,
+    #     [
+    #         (r"_1a1$", "_a"),
+    #         (r"_1b1$", "_b"),
+    #     ],
+    # )
     print("Remove samples without annotations...")
     all_annotations = remove_unannotated_samples(all_annotations)
     print("Remove empty translation annotations...")
@@ -41,4 +50,5 @@ if __name__ == "__main__":
     save_annotations_to_json(annotations_dest_filepath, all_annotations)
 
     # all_annotations = read_annotations_from_json(annotations_dest_filepath)
-    # extract_vocabulary_from_all_annotations(all_annotations, key='label')
+    vocab = extract_vocabulary_from_annotations(all_annotations)
+    to_json(vocab, f"{root}/vocabulary.json")
