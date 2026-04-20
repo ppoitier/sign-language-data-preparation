@@ -9,7 +9,9 @@ from sldp.poses.io import load_poses_from_tars
 
 
 def load_continuous_samples_from_annotations(
-    root: str, sign_language: str
+    root: str,
+    sign_language: str,
+    annotation_ids=("left_hand", "right_hand", "both_hands"),
 ) -> list[SignLanguageSample]:
     annotation_filepath = f"{root}/annotations/all_annotations.json"
     print("Loading annotations...")
@@ -20,10 +22,6 @@ def load_continuous_samples_from_annotations(
     poses = load_poses_from_tars(
         f"file:{root}/poses/mediapipe/poses_linear_interpolation.tar", sample_ids
     )
-    print("POSES")
-    print(poses.keys())
-    print("ANNOTATIONS")
-    print(annotations.keys())
     print("Preparing samples...")
     samples = []
     for sample_id, annots in annotations.items():
@@ -34,9 +32,7 @@ def load_continuous_samples_from_annotations(
             id=sample_id,
             sign_language=sign_language,
             signer_id=annots["signer"],
-            annotations={
-                k: annots[k] for k in ("left_hand", "right_hand", "both_hands")
-            },
+            annotations={k: annots[k] for k in annotation_ids},
             poses=poses[sample_id],
         )
         if "translation" in annots:

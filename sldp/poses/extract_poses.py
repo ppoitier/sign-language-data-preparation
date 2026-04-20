@@ -8,12 +8,11 @@ from itertools import batched
 from pydantic import BaseModel
 import pandas as pd
 
-
 from sldp.utils.tar import create_inmemory_tar, add_file_to_tar, save_inmemory_tar
 from sldp.utils.parallel import run_parallel
+from sldp.poses.mediapipe.extraction import load_holistic_landmarker, extract_poses
 
-# from sldp.poses.mediapipe.extraction import load_landmarkers, extract_poses
-# from sign_language_tools.pose.mediapipe.extraction import extract_poses_from_video
+__all__ = ["batch_extract_all_poses_from_video_dir"]
 
 
 class PoseExtractionCommand(BaseModel):
@@ -26,60 +25,32 @@ class BatchPoseExtractionCommand(BaseModel):
     sample_ids: Sequence[str]
     src_video_paths: Sequence[str]
     dest_tar_path: str
-    landmarker_paths: dict[Literal["pose", "hand", "face"], str]
+    landmarker_path: str
 
 
-# def build_poses_from_sample(
-#         sample_id: str,
-#         src_video_path: str,
-#         dest_poses_dir: str,
-# ):
-#     dest_poses_dir = Path(dest_poses_dir)
-#     src_video_ext = Path(src_video_path).suffix
-#     poses = mp_extractor.extract_poses_from_video(src_video_path, show_progress=True)
-#     for region, region_poses in poses.items():
-#         pose_path = dest_poses_dir / region / f"{sample_id}.{src_video_ext}"
-#         pose_path.parent.mkdir(parents=True, exist_ok=True)
-#         np.save(pose_path, region_poses)
-#
-#
-# def build_poses_from_samples(commands: list[PoseExtractionCommand], n_jobs: int = 8):
-#     commands: list[dict]
-#     run_parallel(build_poses_from_sample, commands, n_jobs=n_jobs)
-
-
-def process_batch_pose_extraction_command(
+def _process_batch_pose_extraction_command(
     command: BatchPoseExtractionCommand,
     show_progress: bool = False,
     verbose: bool = False,
 ) -> dict[str, tuple[str, Optional[str]]]:
-    # TODO: add this when mediapipe has updated holistic model
-    # assert (
-    #     ("pose" in command.landmarker_paths) and
-    #     ("hand" in command.landmarker_paths)
-    # ), "Pose and hand landmarkers are mandatory."
-
     dest_tar, dest_tar_buffer = create_inmemory_tar()
     extraction_statuses: dict[str, tuple[str, Optional[str]]] = dict()
     for filepath, sample_id in zip(command.src_video_paths, command.sample_ids):
         try:
             with ExitStack() as stack:
-                # landmarkers = load_landmarkers(command.landmarker_paths)
-                # Register models so they close when the block exits
-                # for model in landmarkers.values():
-                #     if hasattr(model, "__enter__"):  # Safety check
-                #         stack.enter_context(model)
-                # poses = extract_poses(
-                #     filepath,
-                #     landmarkers["pose"],
-                #     landmarkers["hand"],
-                #     landmarkers.get("face"),
-                #     show_progress=show_progress,
-                # )
-                # # TODO: replace this with new Holistic model when it's out
-                # poses = extract_poses_from_video(filepath)
-                # for body_part, poses_array in poses.items():
-                #     add_file_to_tar(f"{sample_id}.poses.{body_part}.npy", dest_tar, poses_array)
+                landmarker = load_holistic_landmarker(command.landmarker_path)
+                # Register landmarker so they close when the block exits
+                if hasattr(landmarker, "__enter__"):
+                    stack.enter_context(landmarker)
+                poses = extract_poses(
+                    filepath,
+                    landmarker,
+                    show_progress=show_progress,
+                )
+                for body_part, poses_array in poses.items():
+                    add_file_to_tar(
+                        f"{sample_id}.poses.{body_part}.npy", dest_tar, poses_array
+                    )
                 extraction_statuses[sample_id] = "ok", None
                 if verbose:
                     print(f"[{os.getpid()}] Success: {sample_id}")
@@ -94,7 +65,7 @@ def process_batch_pose_extraction_command(
 def batch_extract_all_poses_from_video_dir(
     video_dir: str,
     dest_poses_dir: str,
-    landmarker_paths: dict[Literal["pose", "hand", "face"], str],
+    landmarker_path: str,
     tar_name="poses_{:0>6}.tar",
     n_workers: int = 4,
     max_poses_per_tar: int = 500,
@@ -128,7 +99,7 @@ def batch_extract_all_poses_from_video_dir(
                 src_video_paths=batch_video_paths,
                 sample_ids=[Path(v).stem for v in batch_video_paths],
                 dest_tar_path=dest_poses_dir + "/" + tar_name.format(i + index_offset),
-                landmarker_paths=landmarker_paths,
+                landmarker_path=landmarker_path,
             ),
             show_progress=show_progress,
             verbose=verbose,
@@ -136,7 +107,7 @@ def batch_extract_all_poses_from_video_dir(
         for i, batch_video_paths in enumerate(video_path_batches)
     ]
     extraction_statuses = run_parallel(
-        process_batch_pose_extraction_command, kwargs_list=job_kwargs, n_jobs=n_workers
+        _process_batch_pose_extraction_command, kwargs_list=job_kwargs, n_jobs=n_workers
     )
     extraction_statuses = dict(ChainMap(*extraction_statuses))
     df = pd.DataFrame(
