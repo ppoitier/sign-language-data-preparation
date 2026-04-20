@@ -78,8 +78,8 @@ def isolate_signs_from_continuous_sample(
     isolated_samples: list[SignLanguageSample] = []
 
     for row_idx, row in annotation_df.iterrows():
-        label = row.get(label_column)
-        if pd.isna(label):
+        label = str(row.get(label_column))
+        if label is None or pd.isna(label) or len(label) < 1:
             continue
         label = str(label)
         # Filter out-of-vocabulary entries early, before pose slicing
@@ -134,6 +134,7 @@ def isolate_signs_from_continuous_samples(
     label_column: str = "lemma",
     vocabulary: dict[str, int] | None = None,
     progress: bool = False,
+    deduplicate: bool = False,
 ) -> dict[str, list[SignLanguageSample]]:
     """Extract isolated sign samples from a list of continuous samples.
 
@@ -151,19 +152,31 @@ def isolate_signs_from_continuous_samples(
             When provided, only signs whose label appears in this mapping
             are kept, and ``label_id`` is populated from it.
         progress: Whether to display a progress bar. Default to False.
+        deduplicate: Whether to remove duplicated IDs or not. Default to True.
 
     Returns:
         A flat list of isolated :class:`SignLanguageSample` instances
         gathered from all input samples.
     """
     isolated_samples: dict[str, list[SignLanguageSample]] = {}
+    seen_ids: set[str] = set()
 
     for continuous_sample in tqdm(continuous_samples, unit=" samples", disable=not progress):
-        isolated_samples[continuous_sample.id] = isolate_signs_from_continuous_sample(
+        candidates = isolate_signs_from_continuous_sample(
             continuous_sample=continuous_sample,
             annotation_key=annotation_key,
             label_column=label_column,
             vocabulary=vocabulary,
         )
+
+        if deduplicate:
+            filtered = []
+            for sign in candidates:
+                if sign.id not in seen_ids:
+                    seen_ids.add(sign.id)
+                    filtered.append(sign)
+            isolated_samples[continuous_sample.id] = filtered
+        else:
+            isolated_samples[continuous_sample.id] = candidates
 
     return isolated_samples
